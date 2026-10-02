@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LymphImagen PoC</title>
+  <style>
+    :root{--ink:#17324d;--muted:#60758a;--line:#d7e3ed;--blue:#1769aa;--blue-dark:#0e4e80;--panel:#fff;--bg:#eef4f8}
+    *{box-sizing:border-box}
+    body{margin:0;font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:linear-gradient(145deg,#eaf4fb,var(--bg) 45%,#f8fbfd)}
+    main{max-width:1180px;margin:0 auto;padding:3rem 1.25rem 4rem}
+    .hero{display:flex;align-items:flex-end;justify-content:space-between;gap:2rem;margin-bottom:2rem}
+    .eyebrow{margin:0 0 .4rem;color:var(--blue);font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+    h1{margin:0;font-size:clamp(2rem,5vw,3.5rem);letter-spacing:-.04em}
+    h2{margin:.1rem 0 .35rem;font-size:1.3rem}
+    p{margin:.25rem 0;color:var(--muted)}
+    .notice{max-width:340px;padding:.8rem 1rem;border:1px solid #c9deed;border-radius:12px;background:#f7fcff;font-size:.88rem}
+    .tabs{display:flex;gap:.55rem;overflow-x:auto;padding:.35rem;margin:0 0 1.25rem;border:1px solid var(--line);border-radius:14px;background:#fff9}
+    button.tab-button{flex:1;min-width:190px;color:var(--ink);background:transparent;box-shadow:none}
+    button.tab-button:hover{color:var(--blue-dark);background:#eaf4fb;transform:none}
+    button.tab-button[aria-selected="true"]{color:#fff;background:var(--blue)}
+    .workflow[hidden]{display:none}
+    .workflow{margin:1.5rem 0;padding:1.35rem;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.88);box-shadow:0 10px 30px #17324d12}
+    .workflow-head{display:flex;align-items:flex-start;gap:1rem;margin-bottom:1rem}
+    .step{display:grid;place-items:center;flex:0 0 2.1rem;height:2.1rem;border-radius:50%;color:white;background:var(--blue);font-weight:800}
+    .workflow-head p{font-size:.95rem}
+    .controls{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;padding:1rem;border:1px dashed #aac5d8;border-radius:12px;background:#f8fbfd}
+    .file-label{display:flex;align-items:center;gap:.7rem;flex:1;min-width:230px;color:var(--ink);font-weight:650}
+    .file-label input{max-width:100%;font-weight:400}
+    button{border:0;border-radius:9px;padding:.72rem 1.05rem;color:white;background:var(--blue);font:inherit;font-weight:750;cursor:pointer;transition:background .15s,transform .15s}
+    button:hover{background:var(--blue-dark);transform:translateY(-1px)}
+    button:disabled{cursor:wait;opacity:.65;transform:none}
+    .result-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:1rem;margin-top:1rem}
+    .result-panel{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+    .panel-title{display:flex;justify-content:space-between;align-items:center;padding:.7rem .9rem;border-bottom:1px solid var(--line);font-size:.82rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+    .preview-wrap{display:grid;place-items:center;min-height:250px;padding:1rem;background:linear-gradient(135deg,#f4f8fb,#e8f0f5)}
+    .preview-wrap.empty{color:#8497a8;text-align:center}
+    .preview-stage{position:relative;display:inline-block;max-width:100%;line-height:0}
+    .preview{display:block;max-width:100%;max-height:430px;border-radius:8px;object-fit:contain;box-shadow:0 5px 18px #17324d25}
+    .annotation-layer{position:absolute;inset:0;pointer-events:none}
+    .annotation-hotspot{position:absolute;border:0;border-radius:6px;background:transparent;cursor:help;pointer-events:auto}
+    .annotation-hotspot:focus-visible{outline:2px solid #1769aa;outline-offset:2px}
+    .interactive-stage{position:relative;display:inline-block;max-width:100%;line-height:0;touch-action:none}
+    .interactive-stage[hidden],.interactive-overlay[hidden]{display:none!important}
+    .interactive-preview{position:relative;z-index:1;display:block;max-width:100%;max-height:430px;border-radius:8px;object-fit:contain;box-shadow:0 5px 18px #17324d25}
+    .interactive-overlay{position:absolute;z-index:2;inset:0;display:block;width:100%;height:100%;overflow:visible}
+    .interactive-line{stroke:#dc2330;stroke-width:12;paint-order:stroke;filter:drop-shadow(0 0 1px #fff);cursor:ns-resize}
+    .interactive-hit-line{stroke:transparent;stroke-width:48;cursor:ns-resize;pointer-events:stroke}
+    .drag-label-group{cursor:ns-resize}
+    .drag-label-background{fill:#73101b;stroke:#fff;stroke-width:3}
+    .drag-label-text{fill:#fff;font-weight:800;text-anchor:middle;dominant-baseline:middle;paint-order:stroke;stroke:#460008;stroke-width:2px}
+    .interactive-current{margin:.65rem 0 0;color:#176a4a;font-weight:750;text-align:center}
+    .json-output{display:block;min-height:250px;max-height:430px;margin:0;padding:1rem;overflow:auto;background:#102538;color:#d9f0ff;font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;white-space:pre-wrap}
+    .status{min-height:1.5rem;margin:.7rem .2rem 0;font-size:.9rem;color:var(--muted)}
+    .status.error{color:#a52d36}
+    .status.ok{color:#176a4a}
+    @media(max-width:720px){main{padding-top:2rem}.hero{display:block}.notice{max-width:none;margin-top:1rem}.tabs{display:grid}.result-grid{grid-template-columns:1fr}.preview-wrap,.json-output{min-height:190px;max-height:none}.controls{align-items:stretch}.file-label{display:block}.file-label input{display:block;margin-top:.4rem}button:not(.tab-button){width:100%}}
+  </style>
+</head>
+<body>
+  <main>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">LymphImagen · visual measurement PoC</p>
+        <h1>See the image. Read the result.</h1>
+        <p>Upload a limb image and keep the visual evidence beside the JSON response.</p>
+      </div>
+      <div class="notice">Estimates are based on visible image geometry and are not clinical measurements.</div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Measurement workflows">
+      <button id="compare-tab" class="tab-button" type="button" role="tab" aria-selected="true" aria-controls="compare-panel" data-tab="compare-panel">Compare two limbs</button>
+      <button id="coin-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="coin-panel" data-tab="coin-panel" tabindex="-1">Measure with 1 EUR</button>
+      <button id="interactive-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="interactive-panel" data-tab="interactive-panel" tabindex="-1">Interactive comparison</button>
+    </nav>
+
+    <section id="compare-panel" class="workflow" role="tabpanel" aria-labelledby="compare-tab">
+      <div class="workflow-head"><span class="step">1</span><div><h2 id="compare-title">Compare two limbs</h2><p>Use one image containing two separate arms or legs.</p></div></div>
+      <form class="analysis-form" data-endpoint="/api/v1/measure/compare">
+        <div class="controls"><label class="file-label">Choose image <input type="file" name="image" accept="image/*" required></label><button type="submit">Compare limbs</button></div>
+        <p class="status" aria-live="polite">Waiting for an image.</p>
+      </form>
+      <div class="result-grid">
+        <div class="result-panel"><div class="panel-title"><span class="image-title">Loaded image</span><span class="file-name">No file</span></div><div class="preview-wrap empty"><span class="empty-copy">Your image preview will appear here.</span><div class="preview-stage" hidden><img class="preview" alt="Selected limb image preview"><div class="annotation-layer" aria-label="Measurement line tooltips"></div></div></div></div>
+        <div class="result-panel"><div class="panel-title"><span>JSON response</span><span>API</span></div><pre class="json-output" aria-live="polite">Submit an image to see the response.</pre></div>
+      </div>
+    </section>
+
+    <section id="coin-panel" class="workflow" role="tabpanel" aria-labelledby="coin-tab" hidden>
+      <div class="workflow-head"><span class="step">2</span><div><h2 id="coin-title">Measure with a 1 EUR coin</h2><p>Place a fully visible coin beside the limb on the same plane.</p></div></div>
+      <form class="analysis-form" data-endpoint="/api/v1/measure/coin">
+        <div class="controls"><label class="file-label">Choose image <input type="file" name="image" accept="image/*" required></label><button type="submit">Measure limb</button></div>
+        <p class="status" aria-live="polite">Waiting for an image.</p>
+      </form>
+      <div class="result-grid">
+        <div class="result-panel"><div class="panel-title"><span class="image-title">Loaded image</span><span class="file-name">No file</span></div><div class="preview-wrap empty"><span class="empty-copy">Your image preview will appear here.</span><div class="preview-stage" hidden><img class="preview" alt="Selected limb and coin image preview"><div class="annotation-layer" aria-label="Measurement line tooltips"></div></div></div></div>
+        <div class="result-panel"><div class="panel-title"><span>JSON response</span><span>API</span></div><pre class="json-output" aria-live="polite">Submit an image to see the response.</pre></div>
+      </div>
+    </section>
+
+    <section id="interactive-panel" class="workflow" role="tabpanel" aria-labelledby="interactive-tab" hidden>
+      <div class="workflow-head"><span class="step">3</span><div><h2 id="interactive-title">Interactive thickness comparison</h2><p>Analyze two limbs, then drag one red arrow vertically along the thicker limb.</p></div></div>
+      <form class="interactive-form" data-endpoint="/api/v1/measure/interactive-compare">
+        <div class="controls"><label class="file-label">Choose image <input type="file" name="image" accept="image/*" required></label><button type="submit">Build interactive profile</button></div>
+        <p class="status" aria-live="polite">Waiting for an image.</p>
+      </form>
+      <div class="result-grid">
+        <div class="result-panel">
+          <div class="panel-title"><span class="interactive-image-title">Loaded image</span><span class="interactive-file-name">No file</span></div>
+          <div class="preview-wrap interactive-preview-wrap empty">
+            <span class="interactive-empty-copy">Your interactive image will appear here.</span>
+            <div class="interactive-stage" hidden>
+              <img class="interactive-preview" alt="Two limbs with one draggable thickness arrow">
+              <svg class="interactive-overlay" role="img" aria-label="Draggable thickness measurement" hidden>
+                <defs>
+                  <marker id="interactive-arrow" markerWidth="18" markerHeight="18" refX="9" refY="9" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+                    <path d="M 0 0 L 18 9 L 0 18 z" fill="#dc2330" stroke="#fff" stroke-width="1.2"></path>
+                  </marker>
+                </defs>
+                <g class="draggable-measurement">
+                  <title class="drag-tooltip">Drag vertically to compare thickness.</title>
+                  <line class="interactive-hit-line"></line>
+                  <line class="interactive-line" marker-start="url(#interactive-arrow)" marker-end="url(#interactive-arrow)"></line>
+                  <g class="drag-label-group">
+                    <rect class="drag-label-background" rx="7" ry="7"></rect>
+                    <text class="drag-label-text"></text>
+                  </g>
+                </g>
+              </svg>
+            </div>
+            <p class="interactive-current" aria-live="polite" hidden></p>
+          </div>
+        </div>
+        <div class="result-panel"><div class="panel-title"><span>10 fixed measurements</span><span>API</span></div><pre class="json-output interactive-json-output" aria-live="polite">Submit an image to build the profile.</pre></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const tabButtons=[...document.querySelectorAll('[role="tab"]')];
+    const tabPanels=[...document.querySelectorAll('[role="tabpanel"]')];
+    const activateTab=(button)=>{for(const candidate of tabButtons){const active=candidate===button;candidate.setAttribute('aria-selected',String(active));candidate.tabIndex=active?0:-1}for(const panel of tabPanels)panel.hidden=panel.id!==button.dataset.tab;button.focus()};
+    for(const [index,button] of tabButtons.entries()){
+      button.addEventListener('click',()=>activateTab(button));
+      button.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight'].includes(event.key))return;event.preventDefault();const direction=event.key==='ArrowRight'?1:-1;activateTab(tabButtons[(index+direction+tabButtons.length)%tabButtons.length])});
+    }
+
+    for(const form of document.querySelectorAll('.analysis-form')){
+      const input=form.querySelector('input[type=file]'), button=form.querySelector('button'), status=form.querySelector('.status');
+      const preview=form.parentElement.querySelector('.preview'), previewStage=form.parentElement.querySelector('.preview-stage'), previewWrap=form.parentElement.querySelector('.preview-wrap'), emptyCopy=form.parentElement.querySelector('.empty-copy'), annotationLayer=form.parentElement.querySelector('.annotation-layer'), imageTitle=form.parentElement.querySelector('.image-title'), fileName=form.parentElement.querySelector('.file-name'), output=form.parentElement.querySelector('.json-output');
+      const clearHotspots=()=>annotationLayer.replaceChildren();
+      const renderHotspots=(body)=>{clearHotspots();const lines=body.mode==='compare'?body.diameter_comparison?.diameter_lines:body.diameter_lines;if(!lines?.length||!preview.naturalWidth)return;const scaleX=preview.clientWidth/preview.naturalWidth,scaleY=preview.clientHeight/preview.naturalHeight;for(const line of lines){const lineBox=line.bounding_box_px,labelBox=line.label_bbox_px||lineBox;const padding=Math.max(10,(line.line_width_px||10)*2);const left=Math.max(0,(Math.min(lineBox.x,labelBox.x)-padding)*scaleX);const top=Math.max(0,(Math.min(lineBox.y,labelBox.y)-padding)*scaleY);const right=Math.min(preview.clientWidth,(Math.max(lineBox.x+lineBox.width,labelBox.x+labelBox.width)+padding)*scaleX);const bottom=Math.min(preview.clientHeight,(Math.max(lineBox.y+lineBox.height,labelBox.y+labelBox.height)+padding)*scaleY);const hotspot=document.createElement('span');hotspot.className='annotation-hotspot';hotspot.title=line.tooltip||line.length_label||'Measurement';hotspot.setAttribute('aria-label',hotspot.title);hotspot.tabIndex=0;hotspot.style.left=`${left}px`;hotspot.style.top=`${top}px`;hotspot.style.width=`${Math.max(1,right-left)}px`;hotspot.style.height=`${Math.max(1,bottom-top)}px`;annotationLayer.append(hotspot)}};
+      input.addEventListener('change',()=>{const file=input.files[0];if(!file)return;clearHotspots();preview.src=URL.createObjectURL(file);previewStage.hidden=false;emptyCopy.hidden=true;previewWrap.classList.remove('empty');if(imageTitle)imageTitle.textContent='Loaded image';fileName.textContent=file.name;status.textContent='Ready to analyze.';status.className='status'});
+      form.addEventListener('submit',async event=>{event.preventDefault();if(!input.files[0])return;button.disabled=true;status.textContent='Analyzing image...';status.className='status';output.textContent='Analyzing...';try{const response=await fetch(form.dataset.endpoint,{method:'POST',body:new FormData(form)});const body=await response.json();if(!response.ok)throw new Error(body.detail||'Request failed');if(body.annotated_image){preview.onload=()=>renderHotspots(body);preview.src=body.annotated_image;previewStage.hidden=false;if(imageTitle)imageTitle.textContent=body.mode==='compare'?'Comparison overlay':'Diameter overlay';fileName.textContent='Annotated image'}const displayBody={...body};if(displayBody.annotated_image)displayBody.annotated_image='[displayed as the image overlay]';output.textContent=JSON.stringify(displayBody,null,2);status.textContent='Analysis complete.';status.className='status ok'}catch(error){clearHotspots();output.textContent=JSON.stringify({error:error.message},null,2);status.textContent=error.message;status.className='status error'}finally{button.disabled=false}});
+    }
+
+    const interactiveForm=document.querySelector('.interactive-form');
+    if(interactiveForm){
+      const input=interactiveForm.querySelector('input[type=file]'),button=interactiveForm.querySelector('button'),status=interactiveForm.querySelector('.status');
+      const panel=interactiveForm.parentElement,preview=panel.querySelector('.interactive-preview'),stage=panel.querySelector('.interactive-stage'),previewWrap=panel.querySelector('.interactive-preview-wrap'),emptyCopy=panel.querySelector('.interactive-empty-copy'),imageTitle=panel.querySelector('.interactive-image-title'),fileName=panel.querySelector('.interactive-file-name'),output=panel.querySelector('.interactive-json-output'),current=panel.querySelector('.interactive-current');
+      const svg=panel.querySelector('.interactive-overlay'),measurementGroup=panel.querySelector('.draggable-measurement'),visibleLine=panel.querySelector('.interactive-line'),hitLine=panel.querySelector('.interactive-hit-line'),labelGroup=panel.querySelector('.drag-label-group'),labelRect=panel.querySelector('.drag-label-background'),labelText=panel.querySelector('.drag-label-text'),tooltip=panel.querySelector('.drag-tooltip');
+      let profile=null,dragging=false;
+      const hideInteractiveOverlay=()=>svg.setAttribute('hidden','');
+      const showInteractiveOverlay=()=>svg.removeAttribute('hidden');
+
+      const interpolateMeasurement=(requestedY)=>{
+        const measurements=profile.measurements;
+        const y=Math.max(measurements[0].y_px,Math.min(requestedY,measurements[measurements.length-1].y_px));
+        let upperIndex=measurements.findIndex(measurement=>measurement.y_px>=y);
+        if(upperIndex<=0)upperIndex=0;
+        const lowerIndex=Math.max(0,upperIndex-1),lower=measurements[lowerIndex],upper=measurements[upperIndex];
+        const distance=upper.y_px-lower.y_px,ratio=distance===0?0:(y-lower.y_px)/distance;
+        const mix=(a,b)=>a+(b-a)*ratio;
+        return {y,x1:mix(lower.line.start_px.x,upper.line.start_px.x),x2:mix(lower.line.end_px.x,upper.line.end_px.x),relativePercentage:mix(lower.relative_percentage,upper.relative_percentage)};
+      };
+
+      const renderInteractiveLine=(requestedY)=>{
+        if(!profile)return;
+        const measurement=interpolateMeasurement(requestedY),percentageLabel=`${Math.round(measurement.relativePercentage)}%`;
+        for(const line of [visibleLine,hitLine]){line.setAttribute('x1',measurement.x1);line.setAttribute('x2',measurement.x2);line.setAttribute('y1',measurement.y);line.setAttribute('y2',measurement.y)}
+        const fontSize=Math.max(32,Math.min(72,Math.min(profile.image_width_px,profile.image_height_px)/12));
+        const centerX=(measurement.x1+measurement.x2)/2;
+        let labelY=measurement.y-fontSize*1.05;if(labelY-fontSize/2<0)labelY=measurement.y+fontSize*1.05;
+        labelText.textContent=percentageLabel;labelText.setAttribute('x',centerX);labelText.setAttribute('y',labelY);labelText.style.fontSize=`${fontSize}px`;
+        const textBox=labelText.getBBox(),padding=Math.max(8,fontSize*.18);labelRect.setAttribute('x',textBox.x-padding);labelRect.setAttribute('y',textBox.y-padding);labelRect.setAttribute('width',textBox.width+padding*2);labelRect.setAttribute('height',textBox.height+padding*2);
+        tooltip.textContent=`Relative thickness: ${Math.round(measurement.relativePercentage)}% (reference limb: 100%)`;
+        current.textContent=`Current relative thickness: ${Math.round(measurement.relativePercentage)}% · reference limb: 100% · drag the red arrow up or down`;
+      };
+
+      const pointerY=(event)=>{const bounds=svg.getBoundingClientRect();return (event.clientY-bounds.top)/bounds.height*profile.image_height_px};
+      measurementGroup.addEventListener('pointerdown',event=>{if(!profile)return;dragging=true;svg.setPointerCapture(event.pointerId);event.preventDefault()});
+      svg.addEventListener('pointermove',event=>{if(!dragging)return;renderInteractiveLine(pointerY(event));event.preventDefault()});
+      const stopDragging=event=>{if(!dragging)return;dragging=false;if(svg.hasPointerCapture(event.pointerId))svg.releasePointerCapture(event.pointerId)};
+      svg.addEventListener('pointerup',stopDragging);svg.addEventListener('pointercancel',stopDragging);
+
+      input.addEventListener('change',()=>{const file=input.files[0];if(!file)return;profile=null;hideInteractiveOverlay();current.hidden=true;preview.src=URL.createObjectURL(file);stage.hidden=false;emptyCopy.hidden=true;previewWrap.classList.remove('empty');imageTitle.textContent='Loaded image';fileName.textContent=file.name;status.textContent='Ready to build the interactive profile.';status.className='status'});
+      interactiveForm.addEventListener('submit',async event=>{event.preventDefault();if(!input.files[0])return;button.disabled=true;status.textContent='Measuring 10 fixed levels...';status.className='status';output.textContent='Analyzing...';try{const response=await fetch(interactiveForm.dataset.endpoint,{method:'POST',body:new FormData(interactiveForm)});const body=await response.json();if(!response.ok)throw new Error(body.detail||'Request failed');profile=body;preview.onload=()=>{svg.setAttribute('viewBox',`0 0 ${body.image_width_px} ${body.image_height_px}`);showInteractiveOverlay();current.hidden=false;renderInteractiveLine(body.measurements[body.initial_measurement_index].y_px)};preview.src=body.source_image;stage.hidden=false;emptyCopy.hidden=true;previewWrap.classList.remove('empty');imageTitle.textContent='Interactive comparison';fileName.textContent=`${body.thicker_limb} limb · draggable arrow`;const displayBody={...body,source_image:'[displayed as the interactive image]'};output.textContent=JSON.stringify(displayBody,null,2);status.textContent='Profile ready. Drag the red arrow vertically.';status.className='status ok'}catch(error){profile=null;hideInteractiveOverlay();current.hidden=true;output.textContent=JSON.stringify({error:error.message},null,2);status.textContent=error.message;status.className='status error'}finally{button.disabled=false}});
+    }
+  </script>
+</body>
+</html>
