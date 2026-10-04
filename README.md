@@ -4,9 +4,9 @@ This App is intended to test how to measure and compare limbs in case of swellin
 Estimates are based on visible image geometry and are not clinical measurements.
 
 There are three Options:
-1) Compare two limbs: comparison shows the over percentage of swelling using thinner limb as a reference for 100% limb normal thickness.
-1) Measure with 1€: measurement in centimeters, using an 1€ coin as a reference
-1) Interactive comparison: Allows to drag the red arrowed line up and down to get the different percentages of swelling.
+1) Compare two limbs: Use one image containing two separate arms or legs. Comparison shows the over percentage of swelling using thinner limb as a reference for 100% limb normal thickness.
+1) Measure with 1€: measurement in centimeters, using an 1€ coin as a reference. For this, place a fully visible coin beside the limb on the same plane.
+1) Interactive comparison: Analyze two limbs, then drag one red arrow vertically along the thicker limb. Allows to drag the red arrowed line up and down to get the different percentages of swelling.
 
 In all cases The uploaded image is replaced with an annotated overlay showing one or two thick red line with double-ended arrows.
 
