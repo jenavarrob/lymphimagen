@@ -1,4 +1,4 @@
 BaseAgents/
 app/__pycache__/
 tests/__pycache__/
-architecture.md
+tests/fixtures/__pycache__/
